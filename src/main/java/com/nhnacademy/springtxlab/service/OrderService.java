@@ -1,11 +1,13 @@
 package com.nhnacademy.springtxlab.service;
 
 import com.nhnacademy.springtxlab.entity.Order;
+import com.nhnacademy.springtxlab.entity.enums.PaymentStatus;
 import com.nhnacademy.springtxlab.exception.ExcessivePointIncreaseException;
 import com.nhnacademy.springtxlab.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -27,13 +29,15 @@ public class OrderService {
      */
     @Transactional
     public void processOrder(Order order) {
-        // 결제 진행
-        paymentService.pay(order);
-        log.info("pay success");
 
         // 재고 차감
         productService.decreaseOrderItemsStock(order.getOrderItems());
         log.info("decrease stock success");
+
+        // 결제 진행
+        paymentService.pay(order);
+        log.info("pay success");
+
         // 포인트 추가
         try {
             pointService.increasePoint(order.getMember(), 100);

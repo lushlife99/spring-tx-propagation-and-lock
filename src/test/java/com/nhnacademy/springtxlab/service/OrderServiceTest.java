@@ -1,14 +1,18 @@
 package com.nhnacademy.springtxlab.service;
 
 import com.nhnacademy.springtxlab.entity.*;
+import com.nhnacademy.springtxlab.entity.Order;
+import com.nhnacademy.springtxlab.entity.enums.PaymentStatus;
+import com.nhnacademy.springtxlab.exception.AlreadyProcessOrderException;
 import com.nhnacademy.springtxlab.repository.MemberRepository;
 import com.nhnacademy.springtxlab.repository.OrderRepository;
 import com.nhnacademy.springtxlab.repository.PaymentRepository;
 import com.nhnacademy.springtxlab.repository.ProductRepository;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +22,7 @@ import java.util.List;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @Transactional
 class OrderServiceTest {
 
@@ -45,31 +50,34 @@ class OrderServiceTest {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private EntityManager entityManager;
+
+    private Order order;
+
+    @BeforeEach
+    void setUp() {
+        order = createTestOrder();
+    }
 
     @Test
+    @DisplayName("포인트 결제가 실패했을 때 전체 로직은 롤백되지 않아야 한다.")
     void point_fail_does_not_rollback_payment_and_stock() {
         // given
-        Order order = createTestOrder();
-
-        List<Product> products33 = order.getOrderItems().stream()
-                .map(item -> {
-                    return productRepository.findById(item.getProduct().getId())
-                            .orElseThrow();
-                }).toList();
+        doThrow(new RuntimeException("포인트 적립 실패"))
+                .when(pointService).increasePoint(any(), anyInt());
 
         int[] originalStocks = order.getOrderItems().stream()
                 .mapToInt(item -> item.getProduct().getStock())
                 .toArray();
 
-        doThrow(new RuntimeException("포인트 적립 실패"))
-                .when(pointService).increasePoint(any(), anyInt());
-
         // when
         Assertions.assertDoesNotThrow(() -> orderService.processOrder(order));
 
         // then
-        verify(paymentService).pay(order);
         verify(productService).decreaseOrderItemsStock(order.getOrderItems());
+        verify(paymentService).pay(order);
+        verify(pointService).increasePoint(any(), anyInt());
 
         // DB에서 최신 상태로 불러온 product 목록
         List<Product> products = order.getOrderItems().stream()
@@ -78,7 +86,8 @@ class OrderServiceTest {
                             .orElseThrow();
                 }).toList();
 
-        // 재고 차감 검증
+        // 재고 차감 검증 (롤백 X)
+
         Assertions.assertAll("재고 차감 확인",
                 () -> {
                     for (int i = 0; i < products.size(); i++) {
@@ -89,10 +98,35 @@ class OrderServiceTest {
                     }
                 }
         );
+        // 포인트 롤백 확인
 
+        Member member = memberRepository.findById(order.getMember().getId()).orElseThrow();
+        Assertions.assertEquals(order.getMember().getPoint(), member.getPoint());
     }
 
+    @Test
+    @DisplayName("결제 실패 시 주문도 롤백되어야 한다")
+    void should_rollback_order_when_payment_fails() {
+        // given
+        int initialStock = order.getOrderItems().getFirst().getQuantity();
+        order.getPayment().setPaymentStatus(PaymentStatus.COMPLETED);
 
+        // when
+        Assertions.assertThrows(AlreadyProcessOrderException.class, () -> {
+            orderService.processOrder(order);
+        });
+
+        // then
+        verify(productService).decreaseOrderItemsStock(any());
+        verify(paymentService).pay(order);
+        verify(pointService, never()).increasePoint(any(), anyInt());
+
+        // 재고 차감 롤백 확인
+        Product product = productRepository.findById(order.getOrderItems().getFirst().getId()).orElseThrow();
+        Assertions.assertEquals(initialStock, product.getStock());
+
+
+    }
 
     private Order createTestOrder() {
 
