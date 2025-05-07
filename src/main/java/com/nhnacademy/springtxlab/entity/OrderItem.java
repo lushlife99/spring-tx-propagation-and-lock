@@ -1,10 +1,7 @@
 package com.nhnacademy.springtxlab.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 
 @Entity
@@ -15,10 +12,10 @@ public class OrderItem {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne @Setter
     private Order order;
 
-    @ManyToOne
+    @ManyToOne @Setter
     private Product product;
 
     private int quantity;

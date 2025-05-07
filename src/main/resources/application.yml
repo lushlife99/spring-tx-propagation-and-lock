@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:h2:file:./data/testdb
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -9,7 +9,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: true
     properties:
       hibernate:
@@ -19,3 +19,22 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: your-email@example.com
+    password: your-email-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.resource.transaction: debug
+    org.springframework.orm.jpa.JpaTransactionManager: trace
+    org.springframework.transaction: trace

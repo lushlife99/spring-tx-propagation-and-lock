@@ -21,16 +21,21 @@ public class Order {
     @ManyToOne
     private Member member;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
-    private List<OrderItem> orderItems = new ArrayList<>();
-
     @OneToOne
     private Payment payment;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> orderItems = new ArrayList<>();
+
+    public void addOrderItem(OrderItem item) {
+        orderItems.add(item);
+        item.setOrder(this); // 핵심: 연관관계 주인 쪽도 설정
+    }
+
     @Builder
-    public Order(Member member, List<OrderItem> orderItems, Payment payment) {
+    public Order(Member member, Payment payment) {
         this.member = member;
-        this.orderItems = orderItems;
         this.payment = payment;
     }
+
 }

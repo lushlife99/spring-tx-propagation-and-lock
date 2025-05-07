@@ -1,6 +1,5 @@
 package com.nhnacademy.springtxlab.entity;
 
-import com.nhnacademy.springtxlab.exception.ExcessivePointIncreaseException;
 import com.nhnacademy.springtxlab.exception.NotEnoughMemberMoneyException;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -21,12 +20,14 @@ public class Member {
     private String userName;
     private Long point;
     private Long money;
+    private String email;
 
     @Builder
-    public Member(String userName, long point, long money) {
+    public Member(String userName, long point, long money, String email) {
         this.userName = userName;
         this.point = point;
         this.money = money;
+        this.email = email;
     }
 
     public void increasePoint(long amount) {
