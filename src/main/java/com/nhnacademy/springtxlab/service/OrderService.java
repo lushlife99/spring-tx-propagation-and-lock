@@ -30,12 +30,12 @@ public class OrderService {
      * 1. 결제 진행
      * 2. 재고 차감
      * 3. 포인트 추가
-     * @param order
+     * @param orderId
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processOrder(Order order) {
+    public void processOrder(Long orderId) {
 
-        order = orderRepository.findById(order.getId()).orElseThrow();
+        Order order = orderRepository.findById(orderId).orElseThrow();
 
         // 재고 차감
         productService.decreaseOrderItemsStock(order.getOrderItems());
@@ -59,12 +59,38 @@ public class OrderService {
      * V2에서 EmailSend 로직을 추가.
      * 기본 전략은 롤백이 안됨.
      * 이메일 전송에 오류가 발생했을 때 롤백이 되어야 함. (rollbackFor = MessagingException.class)
-     * @param order
+     *
      * @throws MessagingException
      */
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processOrderV2(Long orderId) throws MessagingException {
+
+        Order order = orderRepository.findById(orderId).orElseThrow();
+        // 재고 차감
+        productService.decreaseOrderItemsStock(order.getOrderItems());
+        log.info("decrease stock success");
+
+        // 결제 진행
+        paymentService.pay(order);
+        log.info("pay success");
+
+        // 포인트 추가
+        try {
+            pointService.increasePoint(order.getMember(), 100);
+            log.info("increase point success");
+        } catch (RuntimeException e) {
+            log.error("error : {}", e.getMessage());
+        }
+
+        // email 보내는 도중 오류 발생 (checked exception)
+        throw new MessagingException(); // 예외 던지기
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = MessagingException.class)
-    public void processOrderV2(Order order) throws MessagingException {
+    public void processOrderV3(Long orderId) throws MessagingException {
+
+        Order order = orderRepository.findById(orderId).orElseThrow();
 
         // 재고 차감
         productService.decreaseOrderItemsStock(order.getOrderItems());
@@ -87,9 +113,9 @@ public class OrderService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processOrderV3(Order order) {
+    public void processOrderV4(Long orderId) {
 
-        order = orderRepository.findById(order.getId()).orElseThrow();
+        Order order = orderRepository.findById(orderId).orElseThrow();
 
         // 재고 차감
         productService.decreaseOrderItemsStock(order.getOrderItems());

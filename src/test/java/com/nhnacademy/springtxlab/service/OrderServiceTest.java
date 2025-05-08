@@ -69,7 +69,7 @@ class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("포인트 결제가 실패했을 때 전체 로직은 롤백되지 않아야 한다.")
+    @DisplayName("포인트 적립이 실패했을 때 전체 주문 로직은 커밋되어야 한다.")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void point_fail_does_not_rollback_payment_and_stock() {
 
@@ -83,7 +83,7 @@ class OrderServiceTest {
                 .toArray();
 
         // when
-        Assertions.assertDoesNotThrow(() -> orderService.processOrder(order));
+        Assertions.assertDoesNotThrow(() -> orderService.processOrder(order.getId()));
 
 
         // then
@@ -128,7 +128,7 @@ class OrderServiceTest {
 
         // when
         Assertions.assertThrows(AlreadyProcessOrderException.class, () -> {
-            orderService.processOrder(order);
+            orderService.processOrder(order.getId());
         });
 
         // then: 서비스 트랜잭션이 끝나고 롤백되었는지 검증
@@ -139,6 +139,37 @@ class OrderServiceTest {
 
     }
 
+    @Test
+    @DisplayName("Checked Exception 이 발생했을 때 커밋되어야 한다.")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void should_commit_checked_exception() {
+        // given
+        int[] originalStocks = order.getOrderItems().stream()
+                .mapToInt(item -> item.getProduct().getStock())
+                .toArray();
+
+        // when
+        Assertions.assertThrows(MessagingException.class, () -> {
+            orderService.processOrderV2(order.getId());
+        });
+
+        // then
+        // product 재고 롤백 검증
+        List<Product> products = order.getOrderItems().stream()
+                .map(item -> productRepository.findById(item.getProduct().getId()).orElseThrow())
+                .toList();
+        Assertions.assertAll("재고 차감 확인",
+                () -> {
+                    for (int i = 0; i < products.size(); i++) {
+                        int expectedStock = originalStocks[i] - order.getOrderItems().get(i).getQuantity();
+                        int actualStock = productRepository.findById(products.get(i).getId()).orElseThrow().getStock();
+
+                        Assertions.assertEquals(expectedStock, actualStock,
+                                "Product " + products.get(i).getId() + " stock mismatch");
+                    }
+                }
+        );
+    }
 
     @Test
     @DisplayName("이메일 전송 오류 시 롤백이 되어야 한다 (rollbackFor 테스트)")
@@ -150,7 +181,7 @@ class OrderServiceTest {
 
         // when
         Assertions.assertThrows(MessagingException.class, () -> {
-            orderService.processOrderV2(order);
+            orderService.processOrderV3(order.getId());
         });
 
         // then
@@ -160,7 +191,7 @@ class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("(REQUIRED -> REQUIRED 전파 수준) 부모 트랜잭션에서 try catch로 자식 트랜잭션에서 발생한 예외를 잡았어도 롤백이 되어야 한다.")
+    @DisplayName("부모 트랜잭션에서 try catch로 자식 트랜잭션에서 발생한 예외를 잡았어도 롤백이 되어야 한다.")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void shouldRollbackParent_whenChildSetsRollbackOnly_evenIfExceptionCaught() {
         // given
@@ -168,7 +199,7 @@ class OrderServiceTest {
 
         // when
         Assertions.assertThrows(RuntimeException.class, () -> {
-            orderService.processOrderV3(order);
+            orderService.processOrderV4(order.getId());
         });
 
         // then
