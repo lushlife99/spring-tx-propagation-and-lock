@@ -18,6 +18,11 @@ public class PointService {
         member.increasePoint(point);
     }
 
+    /**
+     * increasePointV2에서 RuntimeException 발생
+     * @param member
+     * @param point
+     */
     @Transactional(propagation = Propagation.REQUIRED)
     public void increasePointV2(Member member, int point) {
         member.increasePoint(point);

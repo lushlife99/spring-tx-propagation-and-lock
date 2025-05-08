@@ -1,17 +1,13 @@
 package com.nhnacademy.springtxlab.service;
 
 import com.nhnacademy.springtxlab.entity.Order;
-import com.nhnacademy.springtxlab.entity.OrderItem;
 import com.nhnacademy.springtxlab.repository.OrderRepository;
 import jakarta.mail.MessagingException;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.mail.MailException;
 
 @Service
 @RequiredArgsConstructor
@@ -127,6 +123,7 @@ public class OrderService {
 
         // 포인트 추가
         try {
+            // increasePointV2 에서 오류 발생
             pointService.increasePointV2(order.getMember(), 100);
             log.info("increase point success");
         } catch (RuntimeException e) {
