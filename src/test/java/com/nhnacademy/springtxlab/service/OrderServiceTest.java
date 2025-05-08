@@ -113,6 +113,10 @@ class OrderServiceTest {
 
         Member member = memberRepository.findById(order.getMember().getId()).orElseThrow();
         Assertions.assertEquals(expectMemberMoney, member.getMoney());
+
+        // 3. Point 롤백 확인
+        Long point = order.getMember().getPoint();
+        Assertions.assertEquals(point, member.getPoint());
     }
 
 
