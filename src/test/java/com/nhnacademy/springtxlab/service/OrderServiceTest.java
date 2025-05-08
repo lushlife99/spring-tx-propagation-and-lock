@@ -104,7 +104,7 @@ class OrderServiceTest {
                 }
         );
 
-        // 2. 포인트 차감 확인
+        // 2. Money 차감 확인
         List<OrderItem> orderItems = order.getOrderItems();
         long expectMemberMoney = order.getMember().getMoney();
         for (OrderItem orderItem : orderItems) {
