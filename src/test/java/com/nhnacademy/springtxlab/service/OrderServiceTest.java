@@ -78,10 +78,6 @@ class OrderServiceTest {
         doThrow(new RuntimeException("포인트 적립 실패"))
                 .when(pointService).increasePoint(any(), anyInt());
 
-        int[] originalStocks = order.getOrderItems().stream()
-                .mapToInt(item -> item.getProduct().getStock())
-                .toArray();
-
         // when
         Assertions.assertDoesNotThrow(() -> orderService.processOrder(order.getId()));
 
@@ -91,6 +87,10 @@ class OrderServiceTest {
         List<Product> products = order.getOrderItems().stream()
                 .map(item -> productRepository.findById(item.getProduct().getId()).orElseThrow())
                 .toList();
+
+        int[] originalStocks = order.getOrderItems().stream()
+                .mapToInt(item -> item.getProduct().getStock())
+                .toArray();
 
         Assertions.assertAll("재고 차감 확인",
                 () -> {
@@ -121,7 +121,6 @@ class OrderServiceTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void should_rollback_order_when_payment_fails() {
         // given
-        int initialStock = order.getOrderItems().get(0).getProduct().getStock();
         order.getPayment().setPaymentStatus(PaymentStatus.COMPLETED);
         doThrow(new AlreadyProcessOrderException())
                 .when(paymentService).pay(any());
@@ -133,6 +132,7 @@ class OrderServiceTest {
 
         // then: 서비스 트랜잭션이 끝나고 롤백되었는지 검증
         // product 재고 롤백 검증
+        int initialStock = order.getOrderItems().get(0).getProduct().getStock();
         Product product = productRepository.findById(order.getOrderItems().get(0).getProduct().getId())
                 .orElseThrow();
         Assertions.assertEquals(initialStock, product.getStock(), "재고가 롤백되지 않았습니다");
@@ -144,9 +144,6 @@ class OrderServiceTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void should_commit_checked_exception() {
         // given
-        int[] originalStocks = order.getOrderItems().stream()
-                .mapToInt(item -> item.getProduct().getStock())
-                .toArray();
 
         // when
         Assertions.assertThrows(MessagingException.class, () -> {
@@ -158,6 +155,11 @@ class OrderServiceTest {
         List<Product> products = order.getOrderItems().stream()
                 .map(item -> productRepository.findById(item.getProduct().getId()).orElseThrow())
                 .toList();
+
+        int[] originalStocks = order.getOrderItems().stream()
+                .mapToInt(item -> item.getProduct().getStock())
+                .toArray();
+
         Assertions.assertAll("재고 차감 확인",
                 () -> {
                     for (int i = 0; i < products.size(); i++) {
@@ -177,7 +179,6 @@ class OrderServiceTest {
     void should_rollback_checked_exception() throws MessagingException {
         // given
         doThrow(new MessagingException("이메일 전송 오류")).when(emailService).sendEmail(anyString());
-        int initialStock = order.getOrderItems().getFirst().getProduct().getStock();
 
         // when
         Assertions.assertThrows(MessagingException.class, () -> {
@@ -186,6 +187,7 @@ class OrderServiceTest {
 
         // then
         // product 재고 롤백 검증
+        int initialStock = order.getOrderItems().getFirst().getProduct().getStock();
         Product product = productRepository.findById(order.getOrderItems().getFirst().getProduct().getId()).orElseThrow();
         Assertions.assertEquals(initialStock, product.getStock(), "재고가 롤백되지 않았습니다");
     }
@@ -195,7 +197,6 @@ class OrderServiceTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void shouldRollbackParent_whenChildSetsRollbackOnly_evenIfExceptionCaught() {
         // given
-        int initialStock = order.getOrderItems().getFirst().getProduct().getStock();
 
         // when
         Assertions.assertThrows(RuntimeException.class, () -> {
@@ -204,6 +205,7 @@ class OrderServiceTest {
 
         // then
         // product 재고 롤백 검증
+        int initialStock = order.getOrderItems().getFirst().getProduct().getStock();
         Product product = productRepository.findById(order.getOrderItems().getFirst().getProduct().getId()).orElseThrow();
         Assertions.assertEquals(initialStock, product.getStock(), "재고가 롤백되지 않았습니다");
     }
