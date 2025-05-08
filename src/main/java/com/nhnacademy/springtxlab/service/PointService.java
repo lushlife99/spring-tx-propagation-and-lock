@@ -17,4 +17,10 @@ public class PointService {
     public void increasePoint(Member member, int point) {
         member.increasePoint(point);
     }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void increasePointV2(Member member, int point) {
+        member.increasePoint(point);
+        throw new RuntimeException();
+    }
 }

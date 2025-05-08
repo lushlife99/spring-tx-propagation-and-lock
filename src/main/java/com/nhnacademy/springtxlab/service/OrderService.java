@@ -22,7 +22,6 @@ public class OrderService {
     private final ProductService productService;
     private final PointService pointService;
     private final EmailService emailService;
-    private final EntityManager em;
     private final OrderRepository orderRepository;
 
     /**
@@ -65,7 +64,6 @@ public class OrderService {
      */
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = MessagingException.class)
-//    @Transactional
     public void processOrderV2(Order order) throws MessagingException {
 
         // 재고 차감
@@ -87,4 +85,28 @@ public class OrderService {
         emailService.sendEmail(order.getMember().getEmail());
         log.info("send email success");
     }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processOrderV3(Order order) {
+
+        order = orderRepository.findById(order.getId()).orElseThrow();
+
+        // 재고 차감
+        productService.decreaseOrderItemsStock(order.getOrderItems());
+        log.info("decrease stock success");
+
+        // 결제 진행
+        paymentService.pay(order);
+        log.info("pay success");
+
+        // 포인트 추가
+        try {
+            pointService.increasePointV2(order.getMember(), 100);
+            log.info("increase point success");
+        } catch (RuntimeException e) {
+            log.error("error : {}", e.getMessage());
+        }
+
+    }
+
 }

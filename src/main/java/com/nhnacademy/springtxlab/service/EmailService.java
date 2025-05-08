@@ -8,6 +8,7 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +19,7 @@ public class EmailService {
     private final JavaMailSender mailSender;
 
 
+    @Transactional
     public void sendEmail(String to) throws MessagingException, MailException {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
@@ -27,5 +29,9 @@ public class EmailService {
         helper.setText(CONTENT);
 
         mailSender.send(mimeMessage);
+    }
+
+    public void sendEmailV2() {
+
     }
 }

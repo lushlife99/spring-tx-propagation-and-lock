@@ -7,6 +7,7 @@ import com.nhnacademy.springtxlab.exception.AlreadyProcessOrderException;
 import com.nhnacademy.springtxlab.repository.*;
 import jakarta.mail.MessagingException;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +58,7 @@ class OrderServiceTest {
     @Autowired
     private OrderItemRepository orderItemRepository;
 
-    @Autowired
+    @PersistenceContext
     private EntityManager em;
 
     private Order order;
@@ -150,6 +151,24 @@ class OrderServiceTest {
         // when
         Assertions.assertThrows(MessagingException.class, () -> {
             orderService.processOrderV2(order);
+        });
+
+        // then
+        // product 재고 롤백 검증
+        Product product = productRepository.findById(order.getOrderItems().getFirst().getProduct().getId()).orElseThrow();
+        Assertions.assertEquals(initialStock, product.getStock(), "재고가 롤백되지 않았습니다");
+    }
+
+    @Test
+    @DisplayName("(REQUIRED -> REQUIRED 전파 수준) 부모 트랜잭션에서 try catch로 자식 트랜잭션에서 발생한 예외를 잡았어도 롤백이 되어야 한다.")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void shouldRollbackParent_whenChildSetsRollbackOnly_evenIfExceptionCaught() {
+        // given
+        int initialStock = order.getOrderItems().getFirst().getProduct().getStock();
+
+        // when
+        Assertions.assertThrows(RuntimeException.class, () -> {
+            orderService.processOrderV3(order);
         });
 
         // then
