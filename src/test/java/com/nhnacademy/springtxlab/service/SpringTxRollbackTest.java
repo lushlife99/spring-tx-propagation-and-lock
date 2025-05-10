@@ -26,7 +26,7 @@ import static org.mockito.Mockito.*;
 @ActiveProfiles("test")
 @Transactional
 @Slf4j
-class OrderServiceTest {
+class SpringTxRollbackTest {
 
     @Autowired
     private OrderService orderService;
@@ -41,9 +41,6 @@ class OrderServiceTest {
     private PaymentService paymentService;
 
     @Autowired
-    private ProductService productService;
-
-    @Autowired
     private OrderRepository orderRepository;
 
     @Autowired
@@ -54,12 +51,6 @@ class OrderServiceTest {
 
     @Autowired
     private ProductRepository productRepository;
-
-    @Autowired
-    private OrderItemRepository orderItemRepository;
-
-    @PersistenceContext
-    private EntityManager em;
 
     private Order order;
 
