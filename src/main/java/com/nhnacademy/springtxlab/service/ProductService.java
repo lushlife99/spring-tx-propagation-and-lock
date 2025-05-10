@@ -19,9 +19,6 @@ import java.util.List;
 @Slf4j
 public class ProductService {
 
-    @PersistenceContext
-    private EntityManager em;
-
     private final ProductRepository productRepository;
     private final OrderItemRepository orderItemRepository;
 
@@ -35,6 +32,5 @@ public class ProductService {
             }
             orderItem.getProduct().decreaseStock(orderItem.getQuantity());
         }
-        em.flush();
     }
 }

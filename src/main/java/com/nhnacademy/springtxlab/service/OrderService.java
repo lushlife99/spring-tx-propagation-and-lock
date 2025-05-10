@@ -5,6 +5,7 @@ import com.nhnacademy.springtxlab.repository.OrderRepository;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +23,11 @@ public class OrderService {
 
     /**
      * processOrder
-     *
+     * <p>
      * 1. 결제 진행
      * 2. 재고 차감
      * 3. 포인트 추가
+     *
      * @param orderId
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -131,5 +133,29 @@ public class OrderService {
         }
 
     }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processOrderV5(Long orderId) {
+
+        Order order = orderRepository.findById(orderId).orElseThrow();
+
+        // 재고 차감
+        productService.decreaseOrderItemsStock(order.getOrderItems());
+        log.info("decrease stock success");
+
+        // 결제 진행
+        paymentService.pay(order);
+        log.info("pay success");
+
+        // 포인트 추가
+        try {
+            pointService.increasePoint(order.getMember(), 100);
+            log.info("increase point success");
+        } catch (RuntimeException e) {
+            log.error("error : {}", e.getMessage());
+        }
+
+    }
+
 
 }

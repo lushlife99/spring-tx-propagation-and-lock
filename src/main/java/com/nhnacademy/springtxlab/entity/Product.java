@@ -1,9 +1,6 @@
 package com.nhnacademy.springtxlab.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
@@ -17,6 +14,9 @@ public class Product {
     private String productName;
     private int price;
     private int stock;
+
+    @Version
+    private Long version;
 
     public void decreaseStock(int capacity) {
         this.stock -= capacity;
